@@ -11,7 +11,6 @@ const POWER_STATES = ['연속동작', 'ESP 대기', '점퍼 검사', '측정 중
 const REASONS = {1:'P2P',2:'INT2 확인',3:'일과성 기상',4:'지속 이상'};
 const METRICS = {
   rms: {label:'가속도 RMS', unit:'g'},
-  velocity: {label:'속도 RMS', unit:'mm/s'},
   peak: {label:'P2P', unit:'g'}
 };
 
@@ -63,7 +62,6 @@ function renderAxis(axis) {
   const row = axisLatest[axis];
   if (!row) return;
   $(`${prefix}Rms`).textContent = row.rms.toFixed(4);
-  $(`${prefix}Vel`).textContent = `${row.velocity.toFixed(2)} mm/s`;
   $(`${prefix}Peak`).textContent = `${row.peak.toFixed(4)} g`;
   $(`${prefix}Age`).textContent = timeAgo(row.t);
 }
@@ -74,7 +72,6 @@ function renderAxisDetails() {
   $('detailCrest').textContent=row.crest.toFixed(3);
   $('detailKurtosis').textContent=row.kurtosis.toFixed(3);
   $('detailSkewness').textContent=row.skewness.toFixed(3);
-  $('detailRpm').textContent=`${row.rpm.toFixed(1)} RPM`;
   $('detailSamples').textContent=row.samples.toLocaleString();
   $('detailTime').textContent=new Date(row.t).toLocaleTimeString();
 }

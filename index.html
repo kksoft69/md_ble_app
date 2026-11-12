@@ -39,21 +39,21 @@
         <section class="card">
           <div class="section-head"><div><h2>3축 진동</h2><p>각 축의 최신 1초 통계</p></div><span id="dataFreshness" class="pill">데이터 대기</span></div>
           <div class="axis-grid">
-            <article class="axis-card axis-x"><div class="axis-head"><i></i><b>X축</b><span id="xAge">—</span></div><strong id="xRms">—</strong><small>RMS · g</small><dl><div><dt>속도</dt><dd id="xVel">—</dd></div><div><dt>P2P</dt><dd id="xPeak">—</dd></div></dl></article>
-            <article class="axis-card axis-y"><div class="axis-head"><i></i><b>Y축</b><span id="yAge">—</span></div><strong id="yRms">—</strong><small>RMS · g</small><dl><div><dt>속도</dt><dd id="yVel">—</dd></div><div><dt>P2P</dt><dd id="yPeak">—</dd></div></dl></article>
-            <article class="axis-card axis-z"><div class="axis-head"><i></i><b>Z축</b><span id="zAge">—</span></div><strong id="zRms">—</strong><small>RMS · g</small><dl><div><dt>속도</dt><dd id="zVel">—</dd></div><div><dt>P2P</dt><dd id="zPeak">—</dd></div></dl></article>
+            <article class="axis-card axis-x"><div class="axis-head"><i></i><b>X축</b><span id="xAge">—</span></div><strong id="xRms">—</strong><small>RMS · g</small><dl><div><dt>P2P</dt><dd id="xPeak">—</dd></div></dl></article>
+            <article class="axis-card axis-y"><div class="axis-head"><i></i><b>Y축</b><span id="yAge">—</span></div><strong id="yRms">—</strong><small>RMS · g</small><dl><div><dt>P2P</dt><dd id="yPeak">—</dd></div></dl></article>
+            <article class="axis-card axis-z"><div class="axis-head"><i></i><b>Z축</b><span id="zAge">—</span></div><strong id="zRms">—</strong><small>RMS · g</small><dl><div><dt>P2P</dt><dd id="zPeak">—</dd></div></dl></article>
           </div>
         </section>
 
         <section class="card chart-card">
-          <div class="section-head"><div><h2>실시간 추이</h2><p id="chartCaption">축별 최근 측정값</p></div><select id="metric" aria-label="그래프 항목"><option value="rms">가속도 RMS</option><option value="velocity">속도 RMS</option><option value="peak">P2P</option></select></div>
+          <div class="section-head"><div><h2>실시간 추이</h2><p id="chartCaption">축별 최근 측정값</p></div><select id="metric" aria-label="그래프 항목"><option value="rms">가속도 RMS</option><option value="peak">P2P</option></select></div>
           <div class="legend"><span><i class="dot x"></i>X</span><span><i class="dot y"></i>Y</span><span><i class="dot z"></i>Z</span></div>
           <div class="chart-wrap"><canvas id="chart" aria-label="3축 진동 추이 그래프"></canvas><div id="chartEmpty" class="chart-empty">센서 데이터를 기다리고 있습니다</div></div>
         </section>
 
         <section class="card detail-card">
           <div class="section-head"><div><h2>축별 상세 통계</h2><p>선택한 축의 최근 1초 측정값</p></div><select id="detailAxis" aria-label="상세 통계 축"><option value="0">X축</option><option value="1">Y축</option><option value="2">Z축</option></select></div>
-          <div class="health-grid"><div><span>크레스트 팩터</span><strong id="detailCrest">—</strong></div><div><span>첨도</span><strong id="detailKurtosis">—</strong></div><div><span>왜도</span><strong id="detailSkewness">—</strong></div><div><span>회전수</span><strong id="detailRpm">—</strong></div><div><span>표본 수</span><strong id="detailSamples">—</strong></div><div><span>측정 시각</span><strong id="detailTime">—</strong></div></div>
+          <div class="health-grid"><div><span>크레스트 팩터</span><strong id="detailCrest">—</strong></div><div><span>첨도</span><strong id="detailKurtosis">—</strong></div><div><span>왜도</span><strong id="detailSkewness">—</strong></div><div><span>표본 수</span><strong id="detailSamples">—</strong></div><div><span>측정 시각</span><strong id="detailTime">—</strong></div></div>
         </section>
 
         <section class="card health-card"><h2>장치 상태</h2><div class="health-grid"><div><span>전원 모드</span><strong id="powerMode">—</strong></div><div><span>ESP 온도</span><strong id="temperature">—</strong></div><div><span>동작 주기</span><strong id="powerCycleInfo">—</strong></div><div><span>설정 적용</span><strong id="profileState">—</strong></div></div><p id="statusDetail" class="hint">상태 패킷 대기</p></section>
@@ -71,7 +71,7 @@
         <details class="card"><summary>통신 로그</summary><div id="log" class="log"></div></details>
       </section>
     </main>
-    <footer><span><span id="appStatus">오프라인 앱 준비 중</span> · v2</span><button id="installApp" hidden>앱 설치</button></footer>
+    <footer><span><span id="appStatus">오프라인 앱 준비 중</span> · v3</span><button id="installApp" hidden>앱 설치</button></footer>
   </div>
   <script src="./app.js" defer></script>
 </body>

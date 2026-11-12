@@ -1,4 +1,4 @@
-const CACHE = 'md-ble-phone-v2';
+const CACHE = 'md-ble-phone-v3';
 const ASSETS = ['./', './index.html', './styles.css', './app.js', './manifest.webmanifest',
                 './icon-192.png', './icon-512.png'];
 
