@@ -1,0 +1,36 @@
+:root{color-scheme:dark;--bg:#091523;--panel:#132439;--panel2:#0d1c2d;--line:#294158;--text:#edf5ff;--muted:#9db3c8;--green:#54dcc0;--blue:#6caeff;--amber:#ffbe75;--red:#ff858d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif}
+button,input,select{font:inherit}
+button{border:1px solid #49617b;background:#213b56;color:var(--text);border-radius:10px;padding:11px 15px;min-height:44px;cursor:pointer}
+button.primary{background:#0f7669;border-color:#32c8aa;font-weight:700}
+button.danger{border-color:#a85c65;color:#ffc6c8}
+button:disabled{opacity:.45;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+input,select{width:100%;background:#1c344f;border:1px solid #4c6783;color:#fff;border-radius:9px;padding:10px 11px;min-height:44px}
+input[type=checkbox]{width:20px;min-height:20px;accent-color:#43d5b5}
+.app-shell{max-width:1050px;margin:0 auto;padding:0 14px 26px}
+.app-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 2px 14px}
+.brand{display:flex;align-items:center;gap:10px}.brand img{border-radius:10px}.brand strong{display:block;font-size:17px}.brand span{display:block;color:var(--muted);font-size:12px}
+.badge,.pill{display:inline-flex;align-items:center;white-space:nowrap;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:700;border:1px solid #37516d;color:var(--muted);background:#162a40}
+.badge.on{color:var(--green);border-color:#237d6e;background:#0d3e38}.badge.off{color:var(--amber)}
+.hero{padding:20px;border-radius:18px;background:linear-gradient(140deg,#173951,#11293b 65%,#0d273a);border:1px solid #3a6571;box-shadow:0 16px 40px #0003}
+.hero-top{display:flex;align-items:flex-start;justify-content:space-between}.eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#7ce4d0;font-weight:700}
+.hero h1{font-size:25px;line-height:1.2;margin:5px 0 4px}.hero p{margin:0;color:#b6cadb;font-size:13px;overflow-wrap:anywhere}.radio-mark{color:#63e3ca;font-size:28px}
+.hero-actions,.button-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.hint{font-size:12px;color:var(--muted);margin:12px 0 0}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;position:sticky;top:0;z-index:5;background:#091523ed;padding:12px 0 8px;backdrop-filter:blur(8px)}
+.tabs button{border:0;background:transparent;color:var(--muted);border-radius:8px 8px 0 0;border-bottom:2px solid transparent;font-weight:700}.tabs button.active{color:var(--green);border-bottom-color:var(--green);background:#132439}
+.count{background:#294158;border-radius:99px;padding:1px 6px;font-size:11px}.tab-panel{display:grid;gap:12px;padding-top:4px}.tab-panel[hidden]{display:none}
+.summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.summary,.card{border:1px solid var(--line);background:var(--panel);border-radius:15px}.summary{min-width:0}
+.summary{padding:13px 12px}.summary span,.summary small{display:block;color:var(--muted);font-size:11px}.summary strong{display:block;font-size:20px;white-space:nowrap;margin:4px 0}.summary small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card{padding:16px}.card h2{font-size:18px;margin:0}.card p{color:var(--muted);font-size:13px;margin:3px 0 0}.section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:9px;margin-bottom:14px}.section-head select{width:auto;max-width:145px;min-height:36px;padding:6px;font-size:12px}
+.axis-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.axis-card{min-width:0;padding:11px 10px;background:var(--panel2);border:1px solid #25394f;border-radius:12px}
+.axis-head{display:flex;align-items:center;gap:5px}.axis-head i,.dot{width:8px;height:8px;display:inline-block;border-radius:50%;background:var(--green);flex:none}.axis-y i,.dot.y{background:var(--blue)}.axis-z i,.dot.z{background:var(--amber)}.axis-head b{font-size:12px}.axis-head span{margin-left:auto;color:var(--muted);font-size:10px}
+.axis-card>strong{font-size:21px;display:block;white-space:nowrap;margin:14px 0 0;letter-spacing:-.04em}.axis-card>small{color:var(--muted);font-size:11px}.axis-card dl{margin:12px 0 0;border-top:1px solid #27405a;padding-top:7px}.axis-card dl div{display:flex;justify-content:space-between;gap:4px;font-size:11px;margin:3px 0}.axis-card dt{color:var(--muted)}.axis-card dd{margin:0;text-align:right;white-space:nowrap}
+.legend{display:flex;align-items:center;gap:15px;color:var(--muted);font-size:12px;margin:-3px 0 9px}.legend span{display:flex;align-items:center;gap:5px}
+.chart-wrap{position:relative;height:250px;background:#0b1a2a;border-radius:11px;overflow:hidden}.chart-wrap canvas{display:block;width:100%;height:100%}.chart-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;pointer-events:none}.chart-empty[hidden]{display:none}
+.health-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:13px}.health-grid>div{padding:10px;background:#0d1c2d;border-radius:9px}.health-grid span{display:block;color:var(--muted);font-size:11px}.health-grid strong{font-size:14px}
+.event-list{display:grid;gap:8px}.event-item{width:100%;text-align:left;background:#0e2032;padding:12px}.event-item.active{border-color:var(--green);background:#103432}.event-item strong,.event-item span{display:block}.event-item span{font-size:12px;color:var(--muted)}.event-item .event-meta{margin-top:4px;color:var(--text)}.empty{color:var(--muted);padding:20px;text-align:center}.raw-wrap{height:290px}
+.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:15px}.form-grid label{color:var(--muted);font-size:12px;display:grid;gap:5px}.switch-row{display:flex;flex-wrap:wrap;gap:15px;margin-top:15px}.switch-row label{display:flex;align-items:center;gap:6px;color:var(--text);font-size:13px}.feedback{min-height:20px}.log{white-space:pre-wrap;max-height:260px;overflow:auto;font:12px/1.5 ui-monospace,Consolas,monospace;margin-top:12px;color:#b8cadb}details summary{cursor:pointer;font-weight:700}
+footer{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--muted);font-size:11px;padding:18px 3px}footer button{font-size:11px;padding:6px 9px;min-height:30px}
+@media(max-width:420px){.app-shell{padding:0 10px 24px}.hero{padding:17px}.card{padding:14px}.summary{padding:10px 9px}.summary strong{font-size:18px}.axis-card{padding:10px 7px}.axis-card>strong{font-size:19px}.axis-card dl div{display:block}.axis-card dd{text-align:left;font-size:12px}.chart-wrap{height:230px}}

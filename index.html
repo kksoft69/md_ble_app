@@ -1,53 +1,78 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0c1525"><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon-192.png" type="image/png"><title>MD 센서 BLE 시험</title>
-<style>body{font:15px system-ui,sans-serif;background:#0c1525;color:#eff6ff;margin:0;padding:18px}main{max-width:850px;margin:auto}section{background:#16243a;border:1px solid #30425d;border-radius:14px;padding:16px;margin:12px 0}h1{font-size:23px}h2{font-size:18px;margin:0 0 12px}button,input{font:inherit;padding:10px;border:1px solid #526884;border-radius:8px;background:#233b59;color:white}button{cursor:pointer}button:disabled{opacity:.5}label{display:inline-flex;flex-direction:column;margin:5px;gap:4px}canvas{width:100%;height:220px;background:#0b1728}#log{white-space:pre-wrap;max-height:180px;overflow:auto;font:12px monospace}b{color:#5be0c2}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.metric{display:inline-block;padding:8px;min-width:115px;background:#0b1728;border-radius:8px}</style></head>
-<body><main><h1>MD 진동 센서 · BLE 시험</h1><p>Android Chrome · 휴대폰에서 Raytac에 직접 접속</p><p id="appStatus">오프라인 앱 준비 중</p><button id="installApp" hidden>휴대폰에 앱 설치</button>
-<section><div class="row"><button id="connect">센서 연결</button><button id="disconnect" disabled>연결 해제</button><button id="bleOff" disabled>BLE 광고 OFF · Thread 복귀</button></div><p id="connection">대기 중</p><p id="identity">Device ID —</p></section>
-<section><h2>상태</h2><div id="status">수신 대기</div><div id="anomalyStatus"></div></section>
-<section><h2>1초 진동 데이터</h2><div id="stats">수신 대기</div><canvas id="chart" width="800" height="220"></canvas></section>
-<section><h2>전원 설정</h2><div class="row"><label>주기 (초)<input id="cycle" type="number" min="10" max="3600" value="60"></label><label>Awake (초)<input id="awake" type="number" min="2" max="300" value="8"></label></div><div class="row"><button id="continuous" disabled>연속동작</button><button id="periodic" disabled>주기동작</button><button id="sleep" disabled>즉시 Sleep</button><button id="wake" disabled>즉시 Wake</button></div><p id="powerReply"></p></section>
-<section><h2>이상 이벤트 설정</h2><p>현재 프로필을 읽고 간편 임계값·raw·INT2·쿨다운만 변경합니다. 다른 고급 항목은 유지됩니다.</p><div class="row"><label>이벤트 RMS (mg)<input id="threshold" type="number" min="1" max="4000" value="100"></label><label>쿨다운 (초)<input id="cooldown" type="number" min="0" max="3600" value="60"></label><label><span>XYZ raw</span><input id="raw" type="checkbox" checked></label><label><span>INT2 기상</span><input id="int2" type="checkbox"></label></div><div class="row"><button id="readProfile" disabled>설정 읽기</button><button id="applyProfile" disabled>설정 적용</button></div><p id="profileReply"></p></section>
-<section><h2>이벤트·raw</h2><div id="event">이벤트 대기</div><div id="rawState">raw 대기</div><canvas id="rawChart" width="800" height="220"></canvas></section>
-<section><h2>통신 로그</h2><div id="log"></div></section>
-</main><script>
-const $=id=>document.getElementById(id), S='7a526000-758e-4bf4-a9a0-0a349b8ac001',D='7a526001-758e-4bf4-a9a0-0a349b8ac001',C='7a526002-758e-4bf4-a9a0-0a349b8ac001';
-let device,server,command,notifications,deviceId='',profile=null,revision=0,rx=new Map(),txid=0,statsCount=0,events=new Map(),history=[];
-function log(s){$('log').textContent=`${new Date().toLocaleTimeString()} ${s}\n`+$('log').textContent.slice(0,5000)}
-function hex(a){return [...a].map(v=>v.toString(16).padStart(2,'0')).join('')}
-function u16(a,o){return a[o]|a[o+1]<<8}function u32(a,o){return (a[o]|a[o+1]<<8|a[o+2]<<16|a[o+3]<<24)>>>0}
-function put16(a,o,v){a[o]=v&255;a[o+1]=(v>>8)&255}function put32(a,o,v){for(let i=0;i<4;i++)a[o+i]=(v>>>(8*i))&255}
-function ascii(a,o,n){return String.fromCharCode(...a.slice(o,o+n))}
-function volts(v){return v===65535?'—':`${(v/1000).toFixed(3)} V`}
-function chart(id,values,color='#5be0c2'){const c=$(id),x=c.getContext('2d');x.fillStyle='#0b1728';x.fillRect(0,0,c.width,c.height);if(values.length<2)return;const lo=Math.min(...values),hi=Math.max(...values),span=Math.max(0.001,hi-lo);x.strokeStyle=color;x.lineWidth=2;x.beginPath();values.forEach((v,i)=>{const px=10+i*(c.width-20)/(values.length-1),py=10+(hi-v)*(c.height-20)/span;i?x.lineTo(px,py):x.moveTo(px,py)});x.stroke()}
-function packet(kind,a){const dv=new DataView(a.buffer,a.byteOffset,a.byteLength);if(kind===1&&ascii(a,0,4)==='MDV1'){
-  deviceId=hex(a.slice(8,16));$('identity').textContent=`Device ID ${deviceId}`;const axis=a[64],rms=dv.getFloat32(32,true),vel=dv.getFloat32(36,true),peak=dv.getFloat32(40,true),temp=dv.getInt16(65,true)/100;
-  statsCount++;$('stats').innerHTML=`<span class="metric">패킷 <b>${statsCount}</b></span><span class="metric">축 <b>${'XYZ'[Math.max(0,axis-1)]}</b></span><span class="metric">RMS <b>${rms.toFixed(4)} g</b></span><span class="metric">속도 <b>${vel.toFixed(2)} mm/s</b></span><span class="metric">P2P <b>${peak.toFixed(4)} g</b></span><span class="metric">온도 <b>${temp.toFixed(2)} °C</b></span>`;
-  if(axis===1){history.push(rms);if(history.length>90)history.shift();chart('chart',history)}
-}else if(kind===2&&ascii(a,0,4)==='MDS1'){
-  deviceId=hex(a.slice(8,16));$('identity').textContent=`Device ID ${deviceId}`;$('cycle').value=u16(a,48);$('awake').value=u16(a,50);
-  $('status').textContent=`Thread 역할 ${a[6]} · ESP BAT ${volts(u16(a,36))} · Raytac ${volts(u16(a,40))} · 전원상태 ${a[52]} · 주기동작 ${!!(a[53]&16)} · ESP 상태 경과 ${u16(a,42)}초`;
-}else if(kind===3&&ascii(a,0,4)==='MDA1'){$('anomalyStatus').textContent=`이상설정 목표 v${u32(a,13)} / ESP 적용 v${u32(a,17)} · 결과 ${a[29]}`;
-}else if(kind===4&&ascii(a,0,4)==='MDE1'){
-  const seq=u32(a,12),samples=u16(a,34),axes=a[18];events.set(seq,{samples,axes,crc:u32(a,36),data:new Int16Array(samples*(axes===7?3:1)),received:new Set()});$('event').textContent=`이벤트 ${seq} · 원인 ${a[16]} · raw ${samples}시점 · 축 ${axes===7?'XYZ':axes}`;log(`이벤트 ${seq} 수신`);
-}else if(kind===5&&ascii(a,0,4)==='MDR1'){
-  const seq=u32(a,12),e=events.get(seq);if(!e)return;const off=u16(a,16),count=a[18],width=e.axes===7?3:1;for(let i=0;i<count;i++){for(let k=0;k<width;k++)e.data[(off+i)*width+k]=dv.getInt16(20+i*width*2+k*2,true);e.received.add(off+i)}
-  $('rawState').textContent=`이벤트 ${seq} raw ${e.received.size}/${e.samples}시점 · ${e.received.size*width*2} B`;
-  if(e.received.size===e.samples){const x=[];for(let i=0;i<e.samples;i++)x.push(e.data[i*width]/8192);chart('rawChart',x,'#ffb86b');log(`raw ${seq} 완료`)}
-}else if(kind===6&&ascii(a,0,4)==='MDPR'){$('powerReply').textContent=`명령 ${a[5]} 결과 ${a[6]} · 상태 ${a[7]}`;
-}else if(kind===7&&ascii(a,0,4)==='MDAR'){$('profileReply').textContent=`설정 응답 ${a[5]===0?'저장 완료':'오류 '+a[5]} · v${u32(a,6)}`;
-}else if(kind===8&&ascii(a,0,4)==='MDBP'){
-  revision=u32(a,5);profile=a.slice(22);const flags=u16(profile,0),rms=u16(profile,12);$('threshold').value=rms||100;$('cooldown').value=u16(profile,44);$('raw').checked=!!(flags&32);$('int2').checked=!!(flags&2);$('profileReply').textContent=`현재 설정 v${revision} · 적용 v${u32(a,9)}`;
-}}
-function notify(ev){const a=new Uint8Array(ev.target.value.buffer.slice(0));if(a.length<7)return;const kind=a[0],id=u16(a,1),total=u16(a,3),off=u16(a,5),key=`${kind}:${id}`;if(total>256||off+a.length-7>total)return;let item=rx.get(key);if(!item||off===0){item={buf:new Uint8Array(total),pos:0};rx.set(key,item)}if(off!==item.pos)return;item.buf.set(a.slice(7),off);item.pos+=a.length-7;if(item.pos===total){rx.delete(key);packet(kind,item.buf)}}
-async function send(body){if(!command)throw Error('BLE 미연결');const id=++txid,step=13;for(let off=0;off<body.length;off+=step){const n=Math.min(step,body.length-off),frame=new Uint8Array(7+n);frame[0]=128;put16(frame,1,id);put16(frame,3,body.length);put16(frame,5,off);frame.set(body.slice(off,off+n),7);await command.writeValueWithResponse(frame)}}
-async function power(cmd,enabled=false){try{const b=new Uint8Array(16);b[0]=2;b.set([77,68,80,67,1,cmd,enabled?1:0],1);put16(b,8,Number($('cycle').value));put16(b,10,Number($('awake').value));put32(b,12,Date.now()>>>0);await send(b)}catch(e){$('powerReply').textContent=e.message}}
-function crc32(a){let c=0xffffffff;for(const b of a){c^=b;for(let i=0;i<8;i++)c=(c>>>1)^((c&1)?0xedb88320:0)}return(c^0xffffffff)>>>0}
-async function applyProfile(){try{if(!profile)throw Error('먼저 설정 읽기를 누르세요');const p=profile.slice(),mg=Number($('threshold').value),cool=Number($('cooldown').value);if(!(mg>=1&&mg<=4000&&cool>=0&&cool<=3600))throw Error('임계값 또는 쿨다운 범위 오류');let flags=u16(p,0);flags=(flags|1)&~28;flags=$('raw').checked?flags|32:flags&~32;flags=$('int2').checked?flags|2:flags&~2;put16(p,0,flags);p[2]=7;p[3]=Math.max(1,Math.min(63,Math.ceil(mg/15.625)));p[4]=1;put16(p,6,mg);put16(p,8,Math.min(8000,mg*2));for(let i=0;i<3;i++){put16(p,12+i*2,mg);put16(p,18+i*2,0)}put16(p,44,cool);p[46]=7;put16(p,47,1024);const b=new Uint8Array(77);b[0]=3;b.set([77,68,65,67,1,1],1);b.set(Uint8Array.from(deviceId.match(/../g).map(h=>parseInt(h,16))),7);put32(b,15,revision+1);put32(b,19,Date.now()>>>0);b[23]=49;put32(b,24,crc32(p));b.set(p,28);await send(b);$('profileReply').textContent='설정 전송 · ESP 적용 상태를 확인하세요';revision++;profile=p}catch(e){$('profileReply').textContent=e.message}}
-function connectedUI(yes){for(const id of ['disconnect','bleOff','continuous','periodic','sleep','wake','readProfile','applyProfile'])$(id).disabled=!yes;$('connect').disabled=yes}
-$('connect').onclick=async()=>{try{if(!navigator.bluetooth||!isSecureContext)throw Error('HTTPS 보안 페이지의 Android Chrome에서 열어야 합니다');device=await navigator.bluetooth.requestDevice({filters:[{services:[S]}]});device.addEventListener('gattserverdisconnected',()=>{command=null;connectedUI(false);$('connection').textContent='연결 해제 · Thread 복귀 대기';log('BLE 연결 해제')});server=await device.gatt.connect();const svc=await server.getPrimaryService(S);notifications=await svc.getCharacteristic(D);command=await svc.getCharacteristic(C);await notifications.startNotifications();notifications.addEventListener('characteristicvaluechanged',notify);connectedUI(true);$('connection').textContent=`${device.name||'MD-VIB'} 연결됨 · Thread 전환 중`;log('BLE 연결됨');await send(Uint8Array.of(4))}catch(e){log(`연결 오류: ${e.message}`);$('connection').textContent=e.message}};
-$('disconnect').onclick=()=>device?.gatt?.disconnect();$('bleOff').onclick=()=>send(Uint8Array.of(1,0)).catch(e=>log(e.message));$('continuous').onclick=()=>power(1,false);$('periodic').onclick=()=>power(1,true);$('sleep').onclick=()=>power(2);$('wake').onclick=()=>power(3);$('readProfile').onclick=()=>send(Uint8Array.of(4)).catch(e=>log(e.message));$('applyProfile').onclick=applyProfile;
-let installPrompt;
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;$('installApp').hidden=false});
-$('installApp').onclick=async()=>{if(!installPrompt)return;installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;$('installApp').hidden=true};
-window.addEventListener('appinstalled',()=>{$('appStatus').textContent='앱 설치 완료 · 이후 인터넷 없이 실행할 수 있습니다';$('installApp').hidden=true});
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js',{scope:'./'}).then(async()=>{await navigator.serviceWorker.ready;$('appStatus').textContent='오프라인 실행 준비 완료 · 센서 통신은 BLE를 사용합니다'}).catch(e=>{$('appStatus').textContent=`오프라인 준비 실패: ${e.message}`})}else{$('appStatus').textContent='이 브라우저는 오프라인 설치를 지원하지 않습니다'}
-</script></body></html>
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#091523">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon-192.png" type="image/png">
+  <link rel="stylesheet" href="./styles.css">
+  <title>MD 센서 BLE</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand"><img src="./icon-192.png" alt="" width="42" height="42"><div><strong>MD 진동 센서</strong><span>BLE 현장 점검</span></div></div>
+      <div id="connectionBadge" class="badge off">연결 대기</div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-top"><div><div class="eyebrow">선택된 센서</div><h1 id="sensorName">센서를 연결하세요</h1><p id="identity">Device ID —</p></div><div class="radio-mark">◉</div></div>
+      <div class="hero-actions"><button id="connect" class="primary">센서 연결</button><button id="disconnect" disabled>연결 해제</button></div>
+      <div id="connection" class="hint">Raytac의 BLE 광고가 ON이면 인터넷 없이 연결할 수 있습니다.</div>
+    </section>
+
+    <nav class="tabs" aria-label="화면 선택">
+      <button class="active" data-tab="live">실시간</button>
+      <button data-tab="events">이벤트 <span id="eventCount" class="count">0</span></button>
+      <button data-tab="settings">설정</button>
+    </nav>
+
+    <main>
+      <section id="livePanel" class="tab-panel">
+        <div class="summary-grid">
+          <div class="summary"><span>수신 패킷</span><strong id="packetCount">0</strong><small id="lastPacket">아직 수신 없음</small></div>
+          <div class="summary"><span>Raytac 전압</span><strong id="nrfVoltage">—</strong><small>nRF52840 VDD</small></div>
+          <div class="summary"><span>ESP 배터리</span><strong id="batteryVoltage">—</strong><small id="batteryHint">측정값 없음</small></div>
+        </div>
+
+        <section class="card">
+          <div class="section-head"><div><h2>3축 진동</h2><p>각 축의 최신 1초 통계</p></div><span id="dataFreshness" class="pill">데이터 대기</span></div>
+          <div class="axis-grid">
+            <article class="axis-card axis-x"><div class="axis-head"><i></i><b>X축</b><span id="xAge">—</span></div><strong id="xRms">—</strong><small>RMS · g</small><dl><div><dt>속도</dt><dd id="xVel">—</dd></div><div><dt>P2P</dt><dd id="xPeak">—</dd></div></dl></article>
+            <article class="axis-card axis-y"><div class="axis-head"><i></i><b>Y축</b><span id="yAge">—</span></div><strong id="yRms">—</strong><small>RMS · g</small><dl><div><dt>속도</dt><dd id="yVel">—</dd></div><div><dt>P2P</dt><dd id="yPeak">—</dd></div></dl></article>
+            <article class="axis-card axis-z"><div class="axis-head"><i></i><b>Z축</b><span id="zAge">—</span></div><strong id="zRms">—</strong><small>RMS · g</small><dl><div><dt>속도</dt><dd id="zVel">—</dd></div><div><dt>P2P</dt><dd id="zPeak">—</dd></div></dl></article>
+          </div>
+        </section>
+
+        <section class="card chart-card">
+          <div class="section-head"><div><h2>실시간 추이</h2><p id="chartCaption">축별 최근 측정값</p></div><select id="metric" aria-label="그래프 항목"><option value="rms">가속도 RMS</option><option value="velocity">속도 RMS</option><option value="peak">P2P</option></select></div>
+          <div class="legend"><span><i class="dot x"></i>X</span><span><i class="dot y"></i>Y</span><span><i class="dot z"></i>Z</span></div>
+          <div class="chart-wrap"><canvas id="chart" aria-label="3축 진동 추이 그래프"></canvas><div id="chartEmpty" class="chart-empty">센서 데이터를 기다리고 있습니다</div></div>
+        </section>
+
+        <section class="card detail-card">
+          <div class="section-head"><div><h2>축별 상세 통계</h2><p>선택한 축의 최근 1초 측정값</p></div><select id="detailAxis" aria-label="상세 통계 축"><option value="0">X축</option><option value="1">Y축</option><option value="2">Z축</option></select></div>
+          <div class="health-grid"><div><span>크레스트 팩터</span><strong id="detailCrest">—</strong></div><div><span>첨도</span><strong id="detailKurtosis">—</strong></div><div><span>왜도</span><strong id="detailSkewness">—</strong></div><div><span>회전수</span><strong id="detailRpm">—</strong></div><div><span>표본 수</span><strong id="detailSamples">—</strong></div><div><span>측정 시각</span><strong id="detailTime">—</strong></div></div>
+        </section>
+
+        <section class="card health-card"><h2>장치 상태</h2><div class="health-grid"><div><span>전원 모드</span><strong id="powerMode">—</strong></div><div><span>ESP 온도</span><strong id="temperature">—</strong></div><div><span>동작 주기</span><strong id="powerCycleInfo">—</strong></div><div><span>설정 적용</span><strong id="profileState">—</strong></div></div><p id="statusDetail" class="hint">상태 패킷 대기</p></section>
+      </section>
+
+      <section id="eventsPanel" class="tab-panel" hidden>
+        <section class="card"><div class="section-head"><div><h2>이상 이벤트</h2><p>BLE로 받은 최근 이벤트</p></div><span id="eventBadge" class="pill">0건</span></div><div id="eventList" class="event-list"><div class="empty">이벤트 수신 대기</div></div></section>
+        <section class="card"><div class="section-head"><div><h2>XYZ raw 파형</h2><p id="rawState">이벤트를 선택하면 파형을 표시합니다.</p></div></div><div class="legend"><span><i class="dot x"></i>X</span><span><i class="dot y"></i>Y</span><span><i class="dot z"></i>Z</span></div><div class="chart-wrap raw-wrap"><canvas id="rawChart" aria-label="이벤트 raw 파형"></canvas><div id="rawEmpty" class="chart-empty">아직 raw 데이터가 없습니다</div></div><div id="rawDetail" class="hint"></div></section>
+      </section>
+
+      <section id="settingsPanel" class="tab-panel" hidden>
+        <section class="card"><h2>전원 설정</h2><p>BLE 접속 중에는 센서가 연속 측정합니다. 설정 변경 시 새 값이 적용됩니다.</p><div class="form-grid"><label>전체 주기 (초)<input id="cycle" type="number" min="10" max="3600" value="60"></label><label>Awake (초)<input id="awake" type="number" min="2" max="300" value="8"></label></div><div class="button-row"><button id="continuous" disabled>연속동작</button><button id="periodic" disabled class="primary">주기동작</button><button id="sleep" disabled>즉시 Sleep</button><button id="wake" disabled>즉시 Wake</button></div><p id="powerReply" class="feedback"></p></section>
+        <section class="card"><h2>이상 이벤트 설정</h2><p>간편 임계값은 X/Y/Z에 함께 적용됩니다. 설정을 읽은 뒤 변경하세요.</p><div class="form-grid"><label>이벤트 RMS (mg)<input id="threshold" type="number" min="1" max="4000" value="100"></label><label>재발생 제한 (초)<input id="cooldown" type="number" min="0" max="3600" value="60"></label></div><div class="switch-row"><label><input id="raw" type="checkbox" checked> XYZ raw 1024시점</label><label><input id="int2" type="checkbox"> INT2 진동 기상</label></div><div class="button-row"><button id="readProfile" disabled>현재 설정 읽기</button><button id="applyProfile" disabled class="primary">설정 적용</button></div><p id="profileReply" class="feedback"></p></section>
+        <section class="card"><h2>연결 관리</h2><p>BLE 광고를 끄면 연결이 끊기고 Raytac이 Thread로 복귀합니다.</p><button id="bleOff" disabled class="danger">BLE 광고 OFF · Thread 복귀</button></section>
+        <details class="card"><summary>통신 로그</summary><div id="log" class="log"></div></details>
+      </section>
+    </main>
+    <footer><span><span id="appStatus">오프라인 앱 준비 중</span> · v2</span><button id="installApp" hidden>앱 설치</button></footer>
+  </div>
+  <script src="./app.js" defer></script>
+</body>
+</html>

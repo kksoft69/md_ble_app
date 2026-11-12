@@ -1,5 +1,5 @@
-const CACHE = 'md-ble-phone-v1';
-const ASSETS = ['./', './index.html', './manifest.webmanifest',
+const CACHE = 'md-ble-phone-v2';
+const ASSETS = ['./', './index.html', './styles.css', './app.js', './manifest.webmanifest',
                 './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', event => {
